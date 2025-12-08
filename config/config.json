@@ -1,0 +1,30 @@
+{
+  "servers": {
+    "bun_server": {
+      "name": "Bun Server",
+      "port": 3000,
+      "directory": "bun_server",
+      "healthCheck": "/",
+      "buildCommand": "bun install && bun run build",
+      "startCommand": "bun run start"
+    },
+    "react_server": {
+      "name": "Rust Axum Server",
+      "port": 8080,
+      "directory": "react_server",
+      "healthCheck": "/",
+      "buildCommand": "cd frontend && npm install && npm run build && cd .. && cargo build --release",
+      "startCommand": "cargo run --release"
+    }
+  },
+  "wrk": {
+    "duration": "30s",
+    "threads": 4,
+    "connections": 100
+  },
+  "lighthouse": {
+    "runs": 3,
+    "formFactor": "desktop",
+    "chromeFlags": "--headless --no-sandbox --disable-gpu"
+  }
+}
