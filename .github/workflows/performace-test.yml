@@ -110,11 +110,27 @@ jobs:
 
           echo "✓ Both servers are ready!"
 
+      - name: Start Hardware Monitoring
+        run: |
+          nohup bash scripts/monitor-hardware.sh > /dev/null 2>&1 &
+          echo $! > logs/monitor.pid
+          echo "Hardware monitoring started with PID: $(cat logs/monitor.pid)"
+          sleep 1
+
       - name: Run wrk Benchmarks
         run: bash scripts/run-wrk-benchmark.sh
 
       - name: Run Lighthouse Tests
         run: bash scripts/run-lighthouse.sh
+
+      - name: Stop Hardware Monitoring
+        if: always()
+        run: |
+          if [ -f logs/monitor.pid ]; then
+            kill $(cat logs/monitor.pid) || true
+            echo "Hardware monitoring stopped"
+            sleep 2
+          fi
 
       - name: Generate Report
         run: bash scripts/generate-report.sh
