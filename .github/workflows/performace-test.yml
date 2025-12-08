@@ -1,0 +1,159 @@
+name: Performance Testing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wrk jq
+          npm install -g @lhci/cli
+
+      - name: Make Scripts Executable
+        run: chmod +x scripts/*.sh
+
+      - name: Collect System Information
+        run: bash scripts/collect-system-info.sh
+
+      - name: Build Bun Server
+        working-directory: bun_server
+        run: |
+          bun install
+          bun run build
+
+      - name: Build React Server
+        working-directory: react_server
+        run: |
+          cd frontend
+          npm install
+          npm run build
+          cd ..
+          cargo build --release
+
+      - name: Start Bun Server
+        working-directory: bun_server
+        run: |
+          nohup bun run start > ../logs/bun-server.log 2>&1 &
+          echo $! > ../logs/bun-server.pid
+          echo "Bun Server started with PID: $(cat ../logs/bun-server.pid)"
+          sleep 5
+          echo "Bun Server initial log:"
+          head -20 ../logs/bun-server.log || echo "No log output yet"
+
+      - name: Start React Server
+        working-directory: react_server
+        run: |
+          nohup cargo run --release > ../logs/react-server.log 2>&1 &
+          echo $! > ../logs/react-server.pid
+          echo "React Server started with PID: $(cat ../logs/react-server.pid)"
+          sleep 10
+          echo "React Server initial log:"
+          head -20 ../logs/react-server.log || echo "No log output yet"
+
+      - name: Wait for Servers
+        run: |
+          echo "Waiting for Bun Server on port 3000..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "✓ Bun Server is ready!"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "✗ Bun Server failed to start. Last 50 lines of log:"
+              tail -50 logs/bun-server.log
+              exit 1
+            fi
+            echo "  Attempt $i/30..."
+            sleep 2
+          done
+
+          echo "Waiting for React Server on port 3001..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3001 > /dev/null 2>&1; then
+              echo "✓ React Server is ready!"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "✗ React Server failed to start. Last 50 lines of log:"
+              tail -50 logs/react-server.log
+              exit 1
+            fi
+            echo "  Attempt $i/30..."
+            sleep 2
+          done
+
+          echo "✓ Both servers are ready!"
+
+      - name: Run wrk Benchmarks
+        run: bash scripts/run-wrk-benchmark.sh
+
+      - name: Run Lighthouse Tests
+        run: bash scripts/run-lighthouse.sh
+
+      - name: Generate Report
+        run: bash scripts/generate-report.sh
+
+      - name: Stop Servers
+        if: always()
+        run: |
+          if [ -f logs/bun-server.pid ]; then
+            kill $(cat logs/bun-server.pid) || true
+          fi
+          if [ -f logs/react-server.pid ]; then
+            kill $(cat logs/react-server.pid) || true
+          fi
+
+      - name: Commit and Push Reports
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+          # Generate report filename with timestamp
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          REPORT_NAME="benchmark-$TIMESTAMP.md"
+
+          # Copy generated report to reports folder
+          if [ -f logs/benchmark-report.md ]; then
+            cp logs/benchmark-report.md report/$REPORT_NAME
+          fi
+
+          # Clean logs folder but keep .gitkeep
+          find logs -type f ! -name '.gitkeep' -delete
+
+          # Add log files to git
+          git add logs/
+
+          # Add and commit report
+          git add report/$REPORT_NAME
+          git diff --quiet && git diff --staged --quiet || git commit -m "docs: Add benchmark report $REPORT_NAME [skip ci]"
+
+          # Push changes
+          git push
