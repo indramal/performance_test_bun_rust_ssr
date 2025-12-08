@@ -47,6 +47,12 @@ jobs:
           bun install
           bun run build
 
+      - name: Build Bun Server (Cached)
+        working-directory: bun_server_cache
+        run: |
+          bun install
+          bun run build
+
       - name: Build React Server
         working-directory: react_server
         run: |
@@ -65,6 +71,16 @@ jobs:
           sleep 5
           echo "Bun Server initial log:"
           head -20 ../logs/bun-server.log || echo "No log output yet"
+
+      - name: Start Bun Server (Cached)
+        working-directory: bun_server_cache
+        run: |
+          nohup bun run start > ../logs/bun-server-cache.log 2>&1 &
+          echo $! > ../logs/bun-server-cache.pid
+          echo "Bun Server (Cached) started with PID: $(cat ../logs/bun-server-cache.pid)"
+          sleep 5
+          echo "Bun Server (Cached) initial log:"
+          head -20 ../logs/bun-server-cache.log || echo "No log output yet"
 
       - name: Start React Server
         working-directory: react_server
@@ -93,6 +109,21 @@ jobs:
             sleep 2
           done
 
+          echo "Waiting for Bun Server (Cached) on port 3002..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3002 > /dev/null 2>&1; then
+              echo "✓ Bun Server (Cached) is ready!"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "✗ Bun Server (Cached) failed to start. Last 50 lines of log:"
+              tail -50 logs/bun-server-cache.log
+              exit 1
+            fi
+            echo "  Attempt $i/30..."
+            sleep 2
+          done
+
           echo "Waiting for React Server on port 3001..."
           for i in {1..30}; do
             if curl -s http://localhost:3001 > /dev/null 2>&1; then
@@ -108,7 +139,7 @@ jobs:
             sleep 2
           done
 
-          echo "✓ Both servers are ready!"
+          echo "✓ All 3 servers are ready!"
 
       - name: Start Hardware Monitoring
         run: |
@@ -140,6 +171,9 @@ jobs:
         run: |
           if [ -f logs/bun-server.pid ]; then
             kill $(cat logs/bun-server.pid) || true
+          fi
+          if [ -f logs/bun-server-cache.pid ]; then
+            kill $(cat logs/bun-server-cache.pid) || true
           fi
           if [ -f logs/react-server.pid ]; then
             kill $(cat logs/react-server.pid) || true
