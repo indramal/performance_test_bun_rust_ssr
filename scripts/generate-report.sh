@@ -61,6 +61,49 @@ REPORT_DATE=$(date '+%Y%m%d_%H%M%S')
     echo "---"
     echo ""
     
+    # Hardware Usage During Tests
+    echo "## Hardware Usage During Tests"
+    echo ""
+    
+    if [ -f "$LOGS_DIR/hardware-usage.log" ]; then
+        echo "Real-time hardware monitoring was performed during the performance tests."
+        echo ""
+        
+        # Calculate averages from the log
+        echo "### Usage Summary"
+        echo ""
+        
+        AVG_CPU=$(grep "CPU Usage:" "$LOGS_DIR/hardware-usage.log" | awk -F': ' '{sum+=$2; count++} END {if(count>0) printf "%.2f%%", sum/count; else print "N/A"}')
+        MAX_CPU=$(grep "CPU Usage:" "$LOGS_DIR/hardware-usage.log" | awk -F': ' '{print $2}' | sort -rn | head -1)
+        
+        echo "- **Average CPU Usage:** $AVG_CPU"
+        echo "- **Peak CPU Usage:** ${MAX_CPU:-N/A}"
+        echo ""
+        
+        # Memory stats
+        PEAK_MEM=$(grep "Memory:" "$LOGS_DIR/hardware-usage.log" | awk -F'[()]' '{print $2}' | sort -rn | head -1)
+        echo "- **Peak Memory Usage:** ${PEAK_MEM:-N/A}"
+        echo ""
+        
+        echo "### Detailed Monitoring Log"
+        echo ""
+        echo "<details>"
+        echo "<summary>Click to expand full hardware usage log</summary>"
+        echo ""
+        echo '```'
+        cat "$LOGS_DIR/hardware-usage.log"
+        echo '```'
+        echo ""
+        echo "</details>"
+        echo ""
+    else
+        echo "*Hardware usage monitoring data not available*"
+        echo ""
+    fi
+    
+    echo "---"
+    echo ""
+    
     # wrk Benchmark Results
     echo "## wrk Benchmark Results"
     echo ""
