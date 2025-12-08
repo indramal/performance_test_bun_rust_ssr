@@ -46,7 +46,11 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000); // Run every hour
 
+// Get port from environment or default to 3002
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3002;
+
 const server = serve({
+  port: PORT,
   routes: {
     // Serve client bundle
     "/client.js": async () => {
