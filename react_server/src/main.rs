@@ -37,7 +37,7 @@ async fn main() {
         .fallback(ssr_handler);
 
     // Run the server
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     println!("🚀 Server running at http://{}", addr);
     
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -141,12 +141,12 @@ if (typeof URL === 'undefined') {
 
 // location polyfill
 var location = {
-    href: 'http://localhost:8080/',
-    origin: 'http://localhost:8080',
+    href: 'http://localhost:3001/',
+    origin: 'http://localhost:3001',
     protocol: 'http:',
-    host: 'localhost:8080',
+    host: 'localhost:3001',
     hostname: 'localhost',
-    port: '8080',
+    port: '3001',
     pathname: '/',
     search: '',
     hash: ''
