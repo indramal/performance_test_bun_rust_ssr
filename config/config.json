@@ -23,6 +23,14 @@
       "healthCheck": "/",
       "buildCommand": "bun install && bun run build",
       "startCommand": "bun run start"
+    },
+    "react_manifest_askama": {
+      "name": "React Manifest Askama",
+      "port": 3003,
+      "directory": "react_manifest_askama",
+      "healthCheck": "/",
+      "buildCommand": "cd client && npm install && npm run build && cd .. && cargo build --release",
+      "startCommand": "cargo run --release"
     }
   },
   "wrk": {

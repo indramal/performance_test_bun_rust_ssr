@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{ title }}</title>
+    {% if let Some(desc) = meta_description %}
+    <meta name="description" content="{{ desc }}" />
+    {% endif %} {# Include CSS file from manifest #} {% if let Some(css_url) =
+    css %}
+    <link rel="stylesheet" href="{{ css_url }}" />
+    {% endif %}
+  </head>
+  <body>
+    <div id="root"></div>
+
+    {# Inject initial data for client hydration (optional) #} {% if let
+    Some(data) = initial_data %}
+    <script>
+      window.__INITIAL_DATA__ = {{ data|safe }};
+    </script>
+    {% endif %} {# Include JS bundle #}
+    <script type="module" src="{{ js }}"></script>
+  </body>
+</html>

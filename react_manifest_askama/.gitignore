@@ -1,0 +1,16 @@
+# Build outputs
+/dist
+/target
+
+# Dependencies
+/client/node_modules
+
+# Development
+*.log
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
