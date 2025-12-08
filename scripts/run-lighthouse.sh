@@ -74,6 +74,10 @@ for SERVER in $SERVERS; do
         --collect.url="$URL" \
         --collect.numberOfRuns="$RUNS" \
         --collect.settings.formFactor="$FORM_FACTOR" \
+        --collect.settings.screenEmulation.mobile=false \
+        --collect.settings.screenEmulation.width=1350 \
+        --collect.settings.screenEmulation.height=940 \
+        --collect.settings.screenEmulation.deviceScaleFactor=1 \
         --collect.settings.chromeFlags="$CHROME_FLAGS" \
         --upload.target=filesystem \
         --upload.outputDir="$OUTPUT_DIR/.lighthouseci" \
