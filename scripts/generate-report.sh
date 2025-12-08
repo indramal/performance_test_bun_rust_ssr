@@ -155,6 +155,58 @@ REPORT_DATE=$(date '+%Y%m%d_%H%M%S')
     echo "---"
     echo ""
     
+    # Cache Performance Comparison
+    echo "## Cache Performance Impact"
+    echo ""
+    
+    # Find latest results for both bun servers
+    LATEST_BUN=$(find "$LOGS_DIR" -name "wrk-bun_server-*.txt" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+    LATEST_CACHE=$(find "$LOGS_DIR" -name "wrk-bun_server_cache-*.txt" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+    
+    if [ -f "$LATEST_BUN" ] && [ -f "$LATEST_CACHE" ]; then
+        echo "Comparing **Bun Server** (no cache) vs **Bun Server (Cached)** with 2-day TTL:"
+        echo ""
+        
+        # Extract metrics
+        BUN_RPS=$(grep "Requests/sec:" "$LATEST_BUN" | awk '{print $2}')
+        CACHE_RPS=$(grep "Requests/sec:" "$LATEST_CACHE" | awk '{print $2}')
+        
+        BUN_LAT=$(grep "Latency" "$LATEST_BUN" | head -1 | awk '{print $2}')
+        CACHE_LAT=$(grep "Latency" "$LATEST_CACHE" | head -1 | awk '{print $2}')
+        
+        BUN_TRANSFER=$(grep "Transfer/sec:" "$LATEST_BUN" | awk '{print $2}')
+        CACHE_TRANSFER=$(grep "Transfer/sec:" "$LATEST_CACHE" | awk '{print $2}')
+        
+        # Calculate improvements
+        if [ -n "$BUN_RPS" ] && [ -n "$CACHE_RPS" ]; then
+            RPS_IMPROVEMENT=$(awk "BEGIN {printf \"%.2f\", (($CACHE_RPS - $BUN_RPS) / $BUN_RPS) * 100}")
+        else
+            RPS_IMPROVEMENT="N/A"
+        fi
+        
+        echo "| Metric | Without Cache | With Cache | Improvement |"
+        echo "|--------|---------------|------------|-------------|"
+        echo "| Requests/sec | ${BUN_RPS:-N/A} | ${CACHE_RPS:-N/A} | ${RPS_IMPROVEMENT}% |"
+        echo "| Latency | ${BUN_LAT:-N/A} | ${CACHE_LAT:-N/A} | - |"
+        echo "| Transfer/sec | ${BUN_TRANSFER:-N/A} | ${CACHE_TRANSFER:-N/A} | - |"
+        echo ""
+        
+        # Performance analysis
+        if [ "$RPS_IMPROVEMENT" != "N/A" ]; then
+            PERF_FACTOR=$(awk "BEGIN {printf \"%.1f\", $CACHE_RPS / $BUN_RPS}")
+            echo "> **Cache Hit Performance:** ${PERF_FACTOR}x faster than no-cache baseline"
+            echo ""
+            echo "The cached server eliminates React SSR rendering on cache hits, serving pre-rendered HTML directly from memory."
+            echo ""
+        fi
+    else
+        echo "*Cache comparison not available - both bun_server and bun_server_cache results needed*"
+        echo ""
+    fi
+    
+    echo "---"
+    echo ""
+    
     # Lighthouse Results
     echo "## Lighthouse Performance Scores"
     echo ""

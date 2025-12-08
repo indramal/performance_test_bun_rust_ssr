@@ -15,6 +15,14 @@
       "healthCheck": "/",
       "buildCommand": "cd frontend && npm install && npm run build && cd .. && cargo build --release",
       "startCommand": "cargo run --release"
+    },
+    "bun_server_cache": {
+      "name": "Bun Server (Cached)",
+      "port": 3002,
+      "directory": "bun_server_cache",
+      "healthCheck": "/",
+      "buildCommand": "bun install && bun run build",
+      "startCommand": "bun run start"
     }
   },
   "wrk": {

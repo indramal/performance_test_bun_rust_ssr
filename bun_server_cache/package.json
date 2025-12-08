@@ -1,0 +1,21 @@
+{
+  "name": "bun-react-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot src/index.tsx --host 0.0.0.0 --port 3002",
+    "build:client": "bun build ./src/frontend.tsx --outdir=dist --target=browser --minify --naming=[dir]/client.[ext]",
+    "build": "bun run build:client",
+    "start": "NODE_ENV=production bun src/index.tsx --host 0.0.0.0 --port 3002"
+  },
+  "dependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/bun": "latest"
+  }
+}
