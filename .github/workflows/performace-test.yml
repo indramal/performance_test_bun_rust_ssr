@@ -69,7 +69,6 @@ jobs:
           npm install
           npm run build
           cd ..
-          cd ..
           cargo build --release
 
       - name: Build React Manifest Askama Actix
@@ -189,10 +188,6 @@ jobs:
               tail -50 logs/react-manifest-askama.log
               exit 1
             fi
-            echo "  Attempt $i/30..."
-            sleep 2
-          done
-
             echo "  Attempt $i/30..."
             sleep 2
           done
