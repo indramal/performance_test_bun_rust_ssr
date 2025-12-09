@@ -69,6 +69,16 @@ jobs:
           npm install
           npm run build
           cd ..
+          cd ..
+          cargo build --release
+
+      - name: Build React Manifest Askama Actix
+        working-directory: react_manifest_askama_actix
+        run: |
+          cd client
+          npm install
+          npm run build
+          cd ..
           cargo build --release
 
       - name: Start Bun Server
@@ -110,6 +120,16 @@ jobs:
           sleep 10
           echo "React Manifest Askama initial log:"
           head -20 ../logs/react-manifest-askama.log || echo "No log output yet"
+
+      - name: Start React Manifest Askama Actix
+        working-directory: react_manifest_askama_actix
+        run: |
+          nohup cargo run --release > ../logs/react-manifest-askama-actix.log 2>&1 &
+          echo $! > ../logs/react-manifest-askama-actix.pid
+          echo "React Manifest Askama Actix started with PID: $(cat ../logs/react-manifest-askama-actix.pid)"
+          sleep 10
+          echo "React Manifest Askama Actix initial log:"
+          head -20 ../logs/react-manifest-askama-actix.log || echo "No log output yet"
 
       - name: Wait for Servers
         run: |
@@ -173,7 +193,26 @@ jobs:
             sleep 2
           done
 
-          echo "✓ All 4 servers are ready!"
+            echo "  Attempt $i/30..."
+            sleep 2
+          done
+
+          echo "Waiting for React Manifest Askama Actix on port 3004..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3004 > /dev/null 2>&1; then
+              echo "✓ React Manifest Askama Actix is ready!"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "✗ React Manifest Askama Actix failed to start. Last 50 lines of log:"
+              tail -50 logs/react-manifest-askama-actix.log
+              exit 1
+            fi
+            echo "  Attempt $i/30..."
+            sleep 2
+          done
+
+          echo "✓ All 5 servers are ready!"
 
       - name: Start Hardware Monitoring
         run: |
@@ -214,6 +253,9 @@ jobs:
           fi
           if [ -f logs/react-manifest-askama.pid ]; then
             kill $(cat logs/react-manifest-askama.pid) || true
+          fi
+          if [ -f logs/react-manifest-askama-actix.pid ]; then
+            kill $(cat logs/react-manifest-askama-actix.pid) || true
           fi
 
       - name: Commit and Push Reports
