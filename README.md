@@ -3,6 +3,8 @@
 This repository contains performance testing infrastructure for benchmarking two server implementations:
 - **Bun Server** - A TypeScript/Bun-based React SSR server
 - **React Server** - A Rust/Axum-based React SSR server
+- **React Manifest Askama** - A Rust/Axum-based React SSR server with Askama templating
+- **React Manifest Askama Actix** - A Rust/Actix-based React SSR server with Askama templating
 
 ## 🚀 Quick Start
 
@@ -180,7 +182,7 @@ npm install -g @lhci/cli
 ## 📝 Notes
 
 - All tests are run against `localhost`
-- Default ports: Bun Server (3000), React Server (8080)
+- Default ports: Bun Server (3000), React Server (3001), Bun Server Cached (3002), React Manifest Askama (3003), React Manifest Askama Actix (3004)
 - Reports include color-coded Lighthouse scores
 - GitHub Actions automatically cleans up logs after committing reports
 

@@ -31,6 +31,14 @@
       "healthCheck": "/",
       "buildCommand": "cd client && npm install && npm run build && cd .. && cargo build --release",
       "startCommand": "cargo run --release"
+    },
+    "react_manifest_askama_actix": {
+      "name": "React Manifest Askama Actix",
+      "port": 3004,
+      "directory": "react_manifest_askama_actix",
+      "healthCheck": "/",
+      "buildCommand": "cd client && npm install && npm run build && cd .. && cargo build --release",
+      "startCommand": "cargo run --release"
     }
   },
   "wrk": {

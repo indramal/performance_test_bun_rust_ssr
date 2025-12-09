@@ -114,6 +114,9 @@ REPORT_DATE=$(date '+%Y%m%d_%H%M%S')
         echo "| Server | Requests/sec | Avg Latency | Transfer/sec |"
         echo "|--------|--------------|-------------|--------------|"
         
+        # Create a temporary file to store rows
+        TEMP_ROWS=$(mktemp)
+        
         for SERVER in $SERVERS; do
             NAME=$(jq -r ".servers.$SERVER.name" "$CONFIG_FILE")
             
@@ -125,11 +128,22 @@ REPORT_DATE=$(date '+%Y%m%d_%H%M%S')
                 LATENCY=$(grep "Latency" "$LATEST_WRK" | head -1 | awk '{print $2}')
                 TRANSFER=$(grep "Transfer/sec:" "$LATEST_WRK" | awk '{print $2}')
                 
-                echo "| $NAME | ${REQ_SEC:-N/A} | ${LATENCY:-N/A} | ${TRANSFER:-N/A} |"
+                # Use a sortable format for the first column (Requests/sec)
+                # We'll strip the suffix for sorting, but keep the original for display
+                # Actually, simpler to just output the row and sort by the 2nd column numerically
+                echo "| $NAME | ${REQ_SEC:-N/A} | ${LATENCY:-N/A} | ${TRANSFER:-N/A} |" >> "$TEMP_ROWS"
             else
-                echo "| $NAME | N/A | N/A | N/A |"
+                echo "| $NAME | N/A | N/A | N/A |" >> "$TEMP_ROWS"
             fi
         done
+        
+        # Sort by Requests/sec (column 3 in the markdown table, but let's extract the number)
+        # The format is "| Name | Req/Sec | ..."
+        # We want to sort descending by Req/Sec.
+        # sort -t'|' -k3 -rn handles this.
+        cat "$TEMP_ROWS" | sort -t'|' -k3 -rn
+        
+        rm "$TEMP_ROWS"
     else
         echo "*No benchmark results available*"
     fi
@@ -201,6 +215,55 @@ REPORT_DATE=$(date '+%Y%m%d_%H%M%S')
         fi
     else
         echo "*Cache comparison not available - both bun_server and bun_server_cache results needed*"
+        echo ""
+    fi
+    
+    echo "---"
+    echo ""
+
+    # Rust Framework Performance Comparison
+    echo "## Rust Framework Performance Impact"
+    echo ""
+    
+    # Find latest results for both rust servers
+    LATEST_AXUM=$(find "$LOGS_DIR" -name "wrk-react_manifest_askama-*.txt" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+    LATEST_ACTIX=$(find "$LOGS_DIR" -name "wrk-react_manifest_askama_actix-*.txt" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+    
+    if [ -f "$LATEST_AXUM" ] && [ -f "$LATEST_ACTIX" ]; then
+        echo "Comparing **Axum** vs **Actix Web** implementation of the same React SSR app:"
+        echo ""
+        
+        # Extract metrics
+        AXUM_RPS=$(grep "Requests/sec:" "$LATEST_AXUM" | awk '{print $2}')
+        ACTIX_RPS=$(grep "Requests/sec:" "$LATEST_ACTIX" | awk '{print $2}')
+        
+        AXUM_LAT=$(grep "Latency" "$LATEST_AXUM" | head -1 | awk '{print $2}')
+        ACTIX_LAT=$(grep "Latency" "$LATEST_ACTIX" | head -1 | awk '{print $2}')
+        
+        AXUM_TRANSFER=$(grep "Transfer/sec:" "$LATEST_AXUM" | awk '{print $2}')
+        ACTIX_TRANSFER=$(grep "Transfer/sec:" "$LATEST_ACTIX" | awk '{print $2}')
+        
+        # Calculate difference
+        if [ -n "$AXUM_RPS" ] && [ -n "$ACTIX_RPS" ]; then
+            # Calculate percentage difference relative to Axum
+            DIFF_RPS=$(awk "BEGIN {printf \"%.2f\", (($ACTIX_RPS - $AXUM_RPS) / $AXUM_RPS) * 100}")
+            if (( $(echo "$DIFF_RPS > 0" | bc -l) )); then
+                DIFF_STR="+${DIFF_RPS}% (Actix Faster)"
+            else
+                DIFF_STR="${DIFF_RPS}% (Axum Faster)"
+            fi
+        else
+            DIFF_STR="N/A"
+        fi
+        
+        echo "| Metric | Axum | Actix Web | Difference |"
+        echo "|--------|------|-----------|------------|"
+        echo "| Requests/sec | ${AXUM_RPS:-N/A} | ${ACTIX_RPS:-N/A} | ${DIFF_STR} |"
+        echo "| Latency | ${AXUM_LAT:-N/A} | ${ACTIX_LAT:-N/A} | - |"
+        echo "| Transfer/sec | ${AXUM_TRANSFER:-N/A} | ${ACTIX_TRANSFER:-N/A} | - |"
+        echo ""
+    else
+        echo "*Rust framework comparison not available - both react_manifest_askama and react_manifest_askama_actix results needed*"
         echo ""
     fi
     
